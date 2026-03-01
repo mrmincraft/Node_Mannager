@@ -1,6 +1,6 @@
 <script setup>
 import { useRoute } from 'vue-router'
-import { useNodeStore } from '../stores/nodeStore'
+import { useNodeStore } from '../stores/nodesStore'
 
 const route = useRoute()
 const nodeStore = useNodeStore()

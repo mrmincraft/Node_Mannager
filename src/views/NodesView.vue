@@ -1,36 +1,38 @@
 <script setup>
-import { ref, computed } from 'vue'
-import NodeCard from '../components/NodeCard.vue'
-import { useNodeStore } from '../stores/nodestore.js'
+import { ref, computed } from 'vue';
+import NodeCard from '../components/NodeCard.vue';
+import { useNodeStore } from '../stores/nodesStore.js';
+import MqttClient from '../class/Mqtt.js';
 
-const nodeStore = useNodeStore()
+const nodeStore = useNodeStore();
+const mqttClient = new MqttClient('mqtt://broker.hivemq.com'); // Example broker URL
 
-const showModal = ref(false)
-const editingIndex = ref(-1)
-
+const showModal = ref(false);
+const editingIndex = ref(-1);
 const newNode = ref({
   name: '',
   status: 'offline',
   type: 'sensor',
-  description: ''
-})
+  description: '',
+  topic: ''
+});
 
-const search = ref('')
-const filterType = ref('all')
-const filterStatus = ref('all')
+const search = ref('');
+const filterType = ref('all');
+const filterStatus = ref('all');
 
 const filteredNodes = computed(() => {
-  return nodeStore.filteredNodes(filterStatus.value, filterType.value, search.value)
-})
+  return nodeStore.filteredNodes(filterStatus.value, filterType.value, search.value);
+});
 
 function openModal() {
-  showModal.value = true
+  showModal.value = true;
 }
 
 function closeModal() {
-  showModal.value = false
-  editingIndex.value = -1
-  resetForm()
+  showModal.value = false;
+  editingIndex.value = -1;
+  resetForm();
 }
 
 function resetForm() {
@@ -38,99 +40,96 @@ function resetForm() {
     name: '',
     status: 'offline',
     type: 'sensor',
-    description: ''
-  }
+    description: '',
+    topic: ''
+  };
 }
 
 function addNode() {
-  nodeStore.addNode(newNode.value)
-  closeModal()
+  nodeStore.addNode(newNode.value);
+  mqttClient.subscribe(newNode.value.topic); // Subscribe to the topic
+  closeModal();
 }
 
 function editNode(index) {
-  editingIndex.value = index
-  const node = nodeStore.nodes[index]
+  editingIndex.value = index;
+  const node = nodeStore.nodes[index];
 
   newNode.value = {
     name: node.name,
     status: node.status,
     type: node.type,
-    description: node.description
-  }
+    description: node.description,
+    topic: node.topic
+  };
 
-  openModal()
+  openModal();
 }
 
 function saveNode() {
-  nodeStore.editNode(editingIndex.value, newNode.value)
-  closeModal()
+  nodeStore.editNode(editingIndex.value, newNode.value);
+  mqttClient.subscribe(newNode.value.topic); // Update subscription
+  closeModal();
 }
 
 function removeNode(index) {
-  nodeStore.removeNode(index)
+  const node = nodeStore.nodes[index];
+  mqttClient.unsubscribe(node.topic); // Unsubscribe from the topic
+  nodeStore.removeNode(index);
 }
 </script>
-
 
 <template>
   <div class="app">
     <div class="searchBar">
       <input v-model="search" placeholder="Search nodes..." />
-    </div>
-
-    <div class="filters">
-      <select v-model="filterStatus">
-        <option value="all">All Status</option>
-        <option value="online">Online</option>
-        <option value="standby">Standby</option>
-        <option value="offline">Offline</option>
-      </select>
-
       <select v-model="filterType">
         <option value="all">All Types</option>
         <option value="sensor">Sensor</option>
         <option value="actuator">Actuator</option>
       </select>
+      <select v-model="filterStatus">
+        <option value="all">All Status</option>
+        <option value="online">Online</option>
+        <option value="offline">Offline</option>
+      </select>
     </div>
-  <div class="nodesGrid">
-    <NodeCard
-      v-for="(node, index) in filteredNodes"
-      :key="index"
-      v-bind="node"
-      @go_to="router.push('/node/$(index)')"
-      @delete="removeNode(index)"
-      @edit="editNode(index)"
-    />
 
-    <div class="addCard" @click="openModal">+</div>
-  </div>
+    <div class="nodesGrid">
+      <div
+        v-for="(node, index) in filteredNodes"
+        :key="node.id"
+        class="node-card"
+      >
+        <NodeCard :node="node" />
+        <button @click="editNode(index)">Edit</button>
+        <button @click="removeNode(index)">Delete</button>
+      </div>
 
-  <div v-if="showModal" class="overlay" @click.self="closeModal">
-    <div class="modal">
-      <h2>{{ editingIndex === -1 ? 'Add a Node' : 'Edit Node' }}</h2>
-
-      <input v-model="newNode.name" placeholder="Name" />
-
-      <select v-model="newNode.status">
-        <option value="online">online</option>
-        <option value="standby">standby</option>
-        <option value="offline">offline</option>
-      </select>
-
-      <select v-model="newNode.type">
-        <option value="sensor">sensor</option>
-        <option value="actuator">actuator</option>
-      </select>
-
-      <textarea v-model="newNode.description" placeholder="Description"></textarea>
-
-      <div class="actions">
-        <button v-if="editingIndex === -1" @click="addNode">Create</button>
-        <button v-else @click="saveNode">Save</button>
-        <button class="cancel" @click="closeModal">Cancel</button>
+      <div class="addCard" @click="openModal">
+        +
       </div>
     </div>
-  </div>
+
+    <div v-if="showModal" class="overlay" @click.self="closeModal">
+      <div class="modal">
+        <h2>{{ editingIndex === -1 ? 'Add Node' : 'Edit Node' }}</h2>
+        <input v-model="newNode.name" placeholder="Node Name" />
+        <select v-model="newNode.type">
+          <option value="sensor">Sensor</option>
+          <option value="actuator">Actuator</option>
+        </select>
+        <textarea v-model="newNode.description" placeholder="Description"></textarea>
+        <input v-model="newNode.topic" placeholder="MQTT Topic" />
+
+        <div class="actions">
+          <button class="cancel" @click="closeModal">Cancel</button>
+          <button @click="editingIndex === -1 ? addNode() : saveNode()">
+            {{ editingIndex === -1 ? 'Add' : 'Save' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
