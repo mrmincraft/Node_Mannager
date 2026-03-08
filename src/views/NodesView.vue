@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import NodeCard from '../components/NodeCard.vue';
 import { useNodeStore } from '../stores/nodesStore.js';
 import MqttClient from '../class/Mqtt.js';
@@ -20,9 +20,19 @@ const newNode = ref({
 const search = ref('');
 const filterType = ref('all');
 const filterStatus = ref('all');
+const connectionError = ref(false);
 
 const filteredNodes = computed(() => {
   return nodeStore.filteredNodes(filterStatus.value, filterType.value, search.value);
+});
+
+onMounted(async () => {
+  try {
+    await mqttClient.connect(); // Attempt to connect to the MQTT broker
+  } catch (error) {
+    console.error('Failed to connect to MQTT broker:', error);
+    connectionError.value = true; // Set connection error flag
+  }
 });
 
 function openModal() {
@@ -81,52 +91,57 @@ function removeNode(index) {
 
 <template>
   <div class="app">
-    <div class="searchBar">
-      <input v-model="search" placeholder="Search nodes..." />
-      <select v-model="filterType">
-        <option value="all">All Types</option>
-        <option value="sensor">Sensor</option>
-        <option value="actuator">Actuator</option>
-      </select>
-      <select v-model="filterStatus">
-        <option value="all">All Status</option>
-        <option value="online">Online</option>
-        <option value="offline">Offline</option>
-      </select>
+    <div v-if="connectionError" class="error-message">
+      <h2>Unable to connect to the MQTT broker. Please check your connection and try again.</h2>
     </div>
-
-    <div class="nodesGrid">
-      <div
-        v-for="(node, index) in filteredNodes"
-        :key="node.id"
-        class="node-card"
-      >
-        <NodeCard :node="node" />
-        <button @click="editNode(index)">Edit</button>
-        <button @click="removeNode(index)">Delete</button>
-      </div>
-
-      <div class="addCard" @click="openModal">
-        +
-      </div>
-    </div>
-
-    <div v-if="showModal" class="overlay" @click.self="closeModal">
-      <div class="modal">
-        <h2>{{ editingIndex === -1 ? 'Add Node' : 'Edit Node' }}</h2>
-        <input v-model="newNode.name" placeholder="Node Name" />
-        <select v-model="newNode.type">
+    <div v-else>
+      <div class="searchBar">
+        <input v-model="search" placeholder="Search nodes..." />
+        <select v-model="filterType">
+          <option value="all">All Types</option>
           <option value="sensor">Sensor</option>
           <option value="actuator">Actuator</option>
         </select>
-        <textarea v-model="newNode.description" placeholder="Description"></textarea>
-        <input v-model="newNode.topic" placeholder="MQTT Topic" />
+        <select v-model="filterStatus">
+          <option value="all">All Status</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
 
-        <div class="actions">
-          <button class="cancel" @click="closeModal">Cancel</button>
-          <button @click="editingIndex === -1 ? addNode() : saveNode()">
-            {{ editingIndex === -1 ? 'Add' : 'Save' }}
-          </button>
+      <div class="nodesGrid">
+        <div
+          v-for="(node, index) in filteredNodes"
+          :key="node.id"
+          class="node-card"
+        >
+          <NodeCard :node="node" />
+          <button @click="editNode(index)">Edit</button>
+          <button @click="removeNode(index)">Delete</button>
+        </div>
+
+        <div class="addCard" @click="openModal">
+          +
+        </div>
+      </div>
+
+      <div v-if="showModal" class="overlay" @click.self="closeModal">
+        <div class="modal">
+          <h2>{{ editingIndex === -1 ? 'Add Node' : 'Edit Node' }}</h2>
+          <input v-model="newNode.name" placeholder="Node Name" />
+          <select v-model="newNode.type">
+            <option value="sensor">Sensor</option>
+            <option value="actuator">Actuator</option>
+          </select>
+          <textarea v-model="newNode.description" placeholder="Description"></textarea>
+          <input v-model="newNode.topic" placeholder="MQTT Topic" />
+
+          <div class="actions">
+            <button class="cancel" @click="closeModal">Cancel</button>
+            <button @click="editingIndex === -1 ? addNode() : saveNode()">
+              {{ editingIndex === -1 ? 'Add' : 'Save' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

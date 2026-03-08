@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
 import NodesView from '../views/NodesView.vue'
 import NodeDetailView from '../views/NodeDetailView.vue'
+import TopicsView from '../views/TopicsView.vue'
 
 const routes = [
   {
@@ -17,10 +18,9 @@ const routes = [
     component: NodesView
   },
   {
-    path: '/nodes/:id',
-    name: 'node-detail',
-    component: NodeDetailView,
-    props: true
+    path: '/topics',
+    name: 'Topics',
+    component: TopicsView
   }
 ]
 

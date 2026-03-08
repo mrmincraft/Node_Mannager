@@ -3,6 +3,7 @@
     <nav>
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/nodes">Nodes</RouterLink>
+      <RouterLink to="/topics">Topics</RouterLink>
     </nav>
     <RouterView/>
   </div>
