@@ -1,39 +1,19 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import NodeCard from '../components/NodeCard.vue';
 import { useNodeStore } from '../stores/nodesStore.js';
-import MqttClient from '../class/Mqtt.js';
 
 const nodeStore = useNodeStore();
-const mqttClient = new MqttClient('mqtt://broker.hivemq.com'); // Example broker URL
-
 const showModal = ref(false);
 const editingIndex = ref(-1);
-const newNode = ref({
-  name: '',
-  status: 'offline',
-  type: 'sensor',
-  description: '',
-  topic: ''
-});
-
 const search = ref('');
 const filterType = ref('all');
 const filterStatus = ref('all');
-const connectionError = ref(false);
 
 const filteredNodes = computed(() => {
   return nodeStore.filteredNodes(filterStatus.value, filterType.value, search.value);
 });
 
-onMounted(async () => {
-  try {
-    await mqttClient.connect(); // Attempt to connect to the MQTT broker
-  } catch (error) {
-    console.error('Failed to connect to MQTT broker:', error);
-    connectionError.value = true; // Set connection error flag
-  }
-});
 
 function openModal() {
   showModal.value = true;
@@ -55,9 +35,16 @@ function resetForm() {
   };
 }
 
+const newNode = ref({
+  name: '',
+  status: 'offline',
+  type: 'sensor',
+  description: '',
+  topic: ''
+});
+
 function addNode() {
   nodeStore.addNode(newNode.value);
-  mqttClient.subscribe(newNode.value.topic); // Subscribe to the topic
   closeModal();
 }
 
@@ -78,23 +65,16 @@ function editNode(index) {
 
 function saveNode() {
   nodeStore.editNode(editingIndex.value, newNode.value);
-  mqttClient.subscribe(newNode.value.topic); // Update subscription
   closeModal();
 }
 
 function removeNode(index) {
-  const node = nodeStore.nodes[index];
-  mqttClient.unsubscribe(node.topic); // Unsubscribe from the topic
   nodeStore.removeNode(index);
 }
 </script>
 
 <template>
   <div class="app">
-    <div v-if="connectionError" class="error-message">
-      <h2>Unable to connect to the MQTT broker. Please check your connection and try again.</h2>
-    </div>
-    <div v-else>
       <div class="searchBar">
         <input v-model="search" placeholder="Search nodes..." />
         <select v-model="filterType">
@@ -133,9 +113,12 @@ function removeNode(index) {
             <option value="sensor">Sensor</option>
             <option value="actuator">Actuator</option>
           </select>
+          <select v-model="newNode.status">
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+          </select>
           <textarea v-model="newNode.description" placeholder="Description"></textarea>
           <input v-model="newNode.topic" placeholder="MQTT Topic" />
-
           <div class="actions">
             <button class="cancel" @click="closeModal">Cancel</button>
             <button @click="editingIndex === -1 ? addNode() : saveNode()">
@@ -145,133 +128,176 @@ function removeNode(index) {
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 
 <style scoped>
-/* ====== Container général ====== */
+@import '../styles/mqtt-utils.css';
+
+/* Container */
 .app {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 30px 20px;
-  font-family: 'Inter', sans-serif;
-  color: #e9ecef;
-  background: #0b0f17;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
-
+/* Search and Filter Bar */
 .searchBar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchBar input,
+.searchBar select {
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
+  outline: none;
+  transition: var(--transition);
+  font-size: var(--font-base);
+  font-family: var(--font-mono);
 }
 
 .searchBar input {
   flex: 1;
-  height: 44px;
-  padding: 0 15px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
-  color: #e9ecef;
-  outline: none;
-  transition: 0.2s;
+  min-width: 150px;
+  height: 2.75rem;
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
-.searchBar input:focus {
+.searchBar select {
+  height: 2.75rem;
+  padding: var(--spacing-xs) var(--spacing-md);
+  min-width: 120px;
+}
+
+.searchBar input:hover,
+.searchBar select:hover {
+  border-color: rgba(124, 211, 255, 0.5);
+}
+
+.searchBar input:focus,
+.searchBar select:focus {
   border-color: rgba(124, 211, 255, 0.8);
   box-shadow: 0 0 0 3px rgba(124, 211, 255, 0.18);
 }
 
-
-.filters {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.filters select {
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
-  color: #e9ecef;
-  outline: none;
-}
-
-
+/* Nodes Grid */
 .nodesGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 18px;
+  gap: var(--spacing-lg);
+  flex: 1;
+  overflow-y: auto;
 }
 
+.node-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
 
+.node-card button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600;
+  background-color: var(--color-primary);
+  color: #fff;
+}
 
+.node-card button:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+}
+
+/* Add Card */
 .addCard {
-  border: 2px dashed rgba(255,255,255,0.20);
-  border-radius: 14px;
+  border: 2px dashed var(--color-border-light);
+  border-radius: var(--radius-lg);
   font-size: 3rem;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 230px;
-  color: rgba(255,255,255,0.7);
-  transition: background 0.2s ease, transform 0.2s ease;
+  min-height: 230px;
+  color: rgba(255, 255, 255, 0.7);
+  transition: var(--transition);
+  font-weight: 700;
 }
 
 .addCard:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   transform: translateY(-3px);
+  border-color: var(--color-primary);
 }
 
-/* ====== Modal ====== */
+/* Modal Overlay */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: var(--z-modal);
+  padding: var(--spacing-md);
 }
 
 .modal {
   background: rgba(18, 23, 33, 0.92);
-  padding: 25px;
-  border-radius: 16px;
-  width: 380px;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
+  gap: var(--spacing-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h2 {
   margin: 0;
   color: #fff;
+  font-size: var(--font-lg);
 }
 
 .modal input,
 .modal select,
 .modal textarea {
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
   outline: none;
+  transition: var(--transition);
+  font-family: var(--font-family);
+  font-size: var(--font-base);
+  min-height: 2.5rem;
 }
 
-.modal textarea {
-  height: 80px;
-  resize: none;
-  padding-top: 10px;
+.modal input:hover:not(:disabled),
+.modal select:hover:not(:disabled),
+.modal textarea:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .modal input:focus,
@@ -281,26 +307,106 @@ function removeNode(index) {
   box-shadow: 0 0 0 3px rgba(124, 211, 255, 0.18);
 }
 
+.modal textarea {
+  min-height: 100px;
+  resize: vertical;
+  padding-top: var(--spacing-sm);
+}
+
+/* Modal Actions */
 .actions {
   display: flex;
   justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-sm);
 }
 
 .actions button {
-  width: 48%;
-  height: 42px;
-  border-radius: 12px;
+  flex: 1;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   font-weight: 700;
+  font-size: var(--font-base);
+  transition: var(--transition);
 }
 
 .actions .cancel {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
-.actions button:hover {
+.actions .cancel:hover {
+  background: rgba(255, 255, 255, 0.18);
   filter: brightness(1.1);
 }
-</style>
+
+.actions button:not(.cancel) {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.actions button:not(.cancel):hover {
+  background: var(--color-primary-dark);
+  filter: brightness(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .nodesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: var(--spacing-lg) var(--spacing-md);
+    gap: var(--spacing-md);
+  }
+
+  .searchBar {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .searchBar input,
+  .searchBar select {
+    width: 100%;
+  }
+
+  .nodesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+  }
+
+  .modal {
+    max-width: 90%;
+    padding: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: var(--spacing-md);
+  }
+
+  .searchBar {
+    gap: var(--spacing-xs);
+  }
+
+  .nodesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .modal {
+    width: 95%;
+    padding: var(--spacing-lg);
+  }
+
+  .addCard {
+    font-size: 2rem;
+    min-height: 180px;
+  }
+}</style>

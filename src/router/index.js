@@ -1,10 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 // Pages
 import DashboardView from '../views/DashboardView.vue'
 import NodesView from '../views/NodesView.vue'
-import NodeDetailView from '../views/NodeDetailView.vue'
-import TopicsView from '../views/TopicsView.vue'
+import MqttViewerView from '../views/MqttViewerView.vue'
 
 const routes = [
   {
@@ -18,13 +17,13 @@ const routes = [
     component: NodesView
   },
   {
-    path: '/topics',
-    name: 'Topics',
-    component: TopicsView
+    path: '/mqtt',
+    name: 'MQTT Viewer',
+    component: MqttViewerView
   }
 ]
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })

@@ -3,7 +3,7 @@
     <nav>
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/nodes">Nodes</RouterLink>
-      <RouterLink to="/topics">Topics</RouterLink>
+      <RouterLink to="/mqtt">MQTT Viewer</RouterLink>
     </nav>
     <RouterView/>
   </div>
@@ -12,57 +12,106 @@
   import { RouterLink, RouterView } from 'vue-router';
 </script>
 <style>
+/* Import theme variables */
+@import './styles/mqtt-utils.css';
+
 /* Light reset */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: Inter, Roboto, sans-serif;
+  font-family: var(--font-family);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: #0b0f17; /* Modrinth dark background */
-  color: #e6e6e6;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 /* Top navigation bar */
 nav {
   display: flex;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: #202325; /* Slightly lighter dark tone */
-  border-bottom: 1px solid #2a2d2f; /* Subtle separator */
-  position: sticky; /* Sticks to top on scroll */
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: #202325;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-nav);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Navigation links */
 nav a {
-  color: #c9c9c9; /* Soft gray text */
+  color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 0.5rem 0.9rem;
-  border-radius: 6px; /* Rounded corners like Modrinth */
-  transition: 0.2s ease;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
   font-weight: 500;
+  white-space: nowrap;
+  font-size: var(--font-base);
 }
 
-/* Hover effect with Modrinth green */
+/* Hover effect */
 nav a:hover {
-  background: #2f3336;
-  color: #00c16a; /* Modrinth green */
+  background: var(--color-bg-hover);
+  color: var(--color-success);
 }
 
 /* Active route styling */
-.router-link-active {
-  background: #00c16a; /* Green highlight */
-  color: #0f0f0f !important; /* Dark text for contrast */
+nav a.router-link-active {
+  background: var(--color-success);
+  color: var(--color-bg-primary) !important;
+  font-weight: 600;
 }
 
 /* Main content container */
 #app {
-  max-width: 900px; /* Centered layout */
-  margin: 2rem auto;
-  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--color-bg-primary);
+}
+
+nav {
+  flex-shrink: 0;
+}
+
+#app > div {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive navigation */
+@media (max-width: 768px) {
+  nav {
+    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  nav a {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  nav {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  nav a {
+    padding: 0.4rem 0.6rem;
+    font-size: var(--font-sm);
+  }
 }
 </style>

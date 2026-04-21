@@ -1,0 +1,100 @@
+.mqtt-subscribe-tab {
+  padding: var(--spacing-lg);
+}
+
+.subscribe-form {
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.subscribe-form h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-lg);
+}
+
+.subscriptions-list {
+  margin-bottom: var(--spacing-xl);
+}
+
+.subscriptions-list h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-lg);
+}
+
+.subscription-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  transition: var(--transition);
+  gap: var(--spacing-md);
+}
+
+.subscription-item:hover {
+  border-color: var(--color-border-hover);
+  background-color: var(--color-bg-hover);
+}
+
+.subscription-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.topic-name {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  margin-bottom: var(--spacing-xs);
+  word-break: break-all;
+}
+
+.subscription-meta {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.message-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+  white-space: nowrap;
+}
+
+.no-subscriptions {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-disabled);
+  background-color: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .mqtt-subscribe-tab {
+    padding: var(--spacing-md);
+  }
+
+  .subscription-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .subscription-info {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .subscription-item .btn {
+    width: 100%;
+  }
+}
