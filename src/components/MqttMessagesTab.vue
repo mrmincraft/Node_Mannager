@@ -28,11 +28,54 @@
         </button>
         <button
           type="button"
+          :class="['btn', store.isLogging ? 'btn-danger' : 'btn-primary']"
+          @click="toggleLogging"
+          :disabled="totalMessages === 0 && !store.isLogging"
+          title="Start/Stop logging messages to file"
+        >
+          {{ store.isLogging ? '⏹️ Stop Logging' : '⏺️ Start Logging' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showExportMenu = !showExportMenu"
+          :disabled="totalMessages === 0"
+          title="Export messages to file"
+        >
+          💾 Export
+        </button>
+        <button
+          type="button"
           class="btn btn-danger"
           @click="clearMessages"
           :disabled="totalMessages === 0"
         >
-          Clear
+          🗑️ Clear
+        </button>
+      </div>
+
+      <!-- Export Menu -->
+      <div v-if="showExportMenu" class="export-menu">
+        <button
+          type="button"
+          class="export-option"
+          @click="exportMessages('json')"
+        >
+          📄 Export as JSON
+        </button>
+        <button
+          type="button"
+          class="export-option"
+          @click="exportMessages('csv')"
+        >
+          📊 Export as CSV
+        </button>
+        <button
+          type="button"
+          class="export-option"
+          @click="exportMessages('txt')"
+        >
+          📝 Export as TXT
         </button>
       </div>
     </div>
@@ -88,7 +131,8 @@ export default {
   data() {
     return {
       filterTopic: '',
-      autoScroll: true
+      autoScroll: true,
+      showExportMenu: false
     }
   },
 
@@ -165,6 +209,37 @@ export default {
     clearMessages() {
       if (confirm('Clear all messages?')) {
         this.store.clearMessages()
+      }
+    },
+
+    async toggleLogging() {
+      if (this.store.isLogging) {
+        const success = await this.store.stopLogging()
+        if (success) {
+          alert('Logging stopped')
+        }
+      } else {
+        const success = await this.store.startLogging()
+        if (success) {
+          alert('Logging started. Messages will be saved to file.')
+        } else {
+          alert('Failed to start logging')
+        }
+      }
+    },
+
+    async exportMessages(format) {
+      try {
+        const result = await this.store.exportMessagesTo(format)
+        if (result.success) {
+          alert(`Messages exported successfully as ${result.filename}`)
+          this.showExportMenu = false
+        } else {
+          alert(`Failed to export messages: ${result.error}`)
+        }
+      } catch (error) {
+        console.error('Export error:', error)
+        alert('Failed to export messages')
       }
     }
   },

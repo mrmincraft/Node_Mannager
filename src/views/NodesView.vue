@@ -94,10 +94,11 @@ function removeNode(index) {
           v-for="(node, index) in filteredNodes"
           :key="node.id"
           class="node-card"
-        >
-          <NodeCard :node="node" />
-          <button @click="editNode(index)">Edit</button>
-          <button @click="removeNode(index)">Delete</button>
+        > 
+          <NodeCard :node="node" 
+            @edit="editNode(index)" 
+            @delete="removeNode(index)" 
+          />
         </div>
 
         <div class="addCard" @click="openModal">

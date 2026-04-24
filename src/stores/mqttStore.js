@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import MqttClient from '../class/Mqtt'
+import loggerService from '../utils/loggerService'
 
 export const useMqttStore = defineStore('mqtt', {
   state: () => ({
     client: null,
     isConnected: false,
+    isLogging: false,
     connectionSettings: {
       brokerUrl: 'mqtt://localhost:1883',
       clientId: `node_manager_${Date.now()}`,
@@ -150,6 +152,11 @@ export const useMqttStore = defineStore('mqtt', {
 
       this.messages.unshift(message)
 
+      // Log message if logging is enabled
+      if (this.isLogging) {
+        loggerService.logMessage(topic, payload, { qos, retained })
+      }
+
       // Limit messages to prevent memory issues
       if (this.messages.length > this.messageLimit) {
         this.messages.pop()
@@ -225,6 +232,65 @@ export const useMqttStore = defineStore('mqtt', {
         } catch (error) {
           console.error('Failed to load connections:', error)
         }
+      }
+    },
+
+    // Logging management
+    async startLogging() {
+      if (this.isLogging) {
+        console.warn('Logging already started')
+        return false
+      }
+
+      try {
+        const sessionName = `mqtt_session_${new Date().toISOString().replace(/[:.]/g, '-')}`
+        const result = await loggerService.startSession(sessionName)
+        
+        if (result) {
+          this.isLogging = true
+          console.log('Logging started:', result)
+          return true
+        }
+        return false
+      } catch (error) {
+        console.error('Failed to start logging:', error)
+        return false
+      }
+    },
+
+    async stopLogging() {
+      if (!this.isLogging) {
+        console.warn('Logging not started')
+        return false
+      }
+
+      try {
+        this.isLogging = false
+        await loggerService.endSession()
+        console.log('Logging stopped')
+        return true
+      } catch (error) {
+        console.error('Failed to stop logging:', error)
+        return false
+      }
+    },
+
+    async exportMessagesTo(format = 'json') {
+      try {
+        const result = await loggerService.exportMessages(this.messages, format)
+        return result
+      } catch (error) {
+        console.error('Failed to export messages:', error)
+        return { success: false, error: error.message }
+      }
+    },
+
+    async getLogsPath() {
+      try {
+        return await loggerService.getLogsPath()
+      } catch (error) {
+        console.error('Failed to get logs path:', error)
+        return null
       }
     }
   }

@@ -1,24 +1,26 @@
 <script setup>
-defineProps({
-  name: String,
-  status: String,
-  type: String,
-  description: String,
-});
 
 const emit = defineEmits(['delete', 'edit', 'go_to'])
+const props = defineProps({
+  node: {
+    type: Object,
+    required: true
+  }
+})
+
 
 </script>
 
 <template>
   <div class="nodeCard" @dblclick="$emit('go_to')">
-    <h3>{{ name }}</h3>
-    <p>Status: <span :class="status">{{ status }}</span></p>
-    <p>Type: {{ type }}</p>
-    <p>{{ description }}</p>
-
-    <button @click="$emit('edit')">Edit</button>
-    <button @click="$emit('delete')">Delete</button>
+    <h3>{{ props.node.name }}</h3>
+    <p>Status: <span :class="props.node.status">{{ props.node.status }}</span></p>
+    <p>Type: {{ props.node.type }}</p>
+    <p>{{ props.node.description }}</p>
+    <div class="actions">
+      <button class="edit" @click="$emit('edit')">Edit</button>
+      <button class="delete" @click="$emit('delete')">Delete</button>
+    </div>
   </div>
 </template>
 
