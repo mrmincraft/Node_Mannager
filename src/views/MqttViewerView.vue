@@ -1,13 +1,12 @@
 <template>
   <div class="mqtt-viewer">
     <div class="viewer-header">
-      <div class="title-section">
-        <h1>MQTT Viewer</h1>
+      <p class="subtitle">{{ currentBroker }}
         <span class="status-badge" :class="connectionStatus">
           {{ connectionStatus }}
         </span>
-      </div>
-      <p class="subtitle">{{ currentBroker }}</p>
+      </p>
+      
     </div>
 
     <div class="tabs">
