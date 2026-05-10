@@ -11,6 +11,7 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "mqtt:default"
   ]
 }

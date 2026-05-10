@@ -113,14 +113,23 @@
 import { useMqttStore } from '../stores/mqttStore'
 import '../styles/mqtt-utils.css'
 import '../styles/MqttConnectionTab.css'
+import { connect, disconnect, publish, subscribe, unsubscribe } from "@kuyoonjo/tauri-plugin-mqtt";
+
 export default {
-  name: 'MqttConnectionTab',
-  
+  name: "MqttConnectionTab",
+
   data() {
     return {
-      settings: {},
+      settings: {
+        brokerUrl: "",
+        clientId: "",
+        username: "",
+        password: "",
+      },
+
       connecting: false,
-      connectionNameInput: ''
+      connectionNameInput: "",
+      mqttClient: null,
     }
   },
 
@@ -145,21 +154,95 @@ export default {
   methods: {
     async handleConnectionToggle() {
       this.connecting = true
+
       try {
-        if (this.isConnected) {
-          this.store.disconnectFromBroker()
+        if (this.mqttClient) {
+          // Disconnect
+          await disconnect(this.mqttClient)
+
+          this.mqttClient = null
+          this.store.isConnected = false
+          this.store.connectionStatus = "Disconnected"
+
+          console.log("Disconnected from broker")
         } else {
-          await this.store.connectToBroker(this.settings)
+          // Connect
+          const client = await connect({
+            url: this.settings.brokerUrl,
+            clientId:
+              this.settings.clientId ||
+              `tauri-client-${Math.random().toString(16).slice(2)}`,
+
+            username: this.settings.username || undefined,
+            password: this.settings.password || undefined,
+          })
+
+          this.mqttClient = client
+
+          this.store.isConnected = true
+          this.store.connectionStatus = "Connected"
+
+          console.log("Connected to broker")
+
+          // Example subscription
+          await subscribe(client, "test/topic", (message) => {
+            console.log("Received:", message)
+          })
+
+          // Example publish
+          await publish(client, "test/topic", "Hello from Tauri MQTT")
         }
       } catch (error) {
-        console.error('Connection error:', error)
+        console.error("MQTT connection error:", error)
+
+        this.store.isConnected = false
+        this.store.connectionStatus = "Error"
       } finally {
         this.connecting = false
       }
     },
 
+    async subscribeToTopic(topic) {
+      if (!this.mqttClient) return
+
+      try {
+        await subscribe(this.mqttClient, topic, (message) => {
+          console.log(`[${topic}]`, message)
+        })
+
+        console.log(`Subscribed to ${topic}`)
+      } catch (error) {
+        console.error("Subscribe error:", error)
+      }
+    },
+
+    async unsubscribeFromTopic(topic) {
+      if (!this.mqttClient) return
+
+      try {
+        await unsubscribe(this.mqttClient, topic)
+
+        console.log(`Unsubscribed from ${topic}`)
+      } catch (error) {
+        console.error("Unsubscribe error:", error)
+      }
+    },
+
+    async publishMessage(topic, payload) {
+      if (!this.mqttClient) return
+
+      try {
+        await publish(this.mqttClient, topic, payload)
+
+        console.log(`Published to ${topic}:`, payload)
+      } catch (error) {
+        console.error("Publish error:", error)
+      }
+    },
+
     saveConnection() {
-      const name = prompt('Enter a name for this connection:')
+      const name = prompt("Enter a name for this connection:")
+
       if (name && name.trim()) {
         this.store.saveConnection(name.trim())
         alert(`Connection "${name}" saved!`)
@@ -172,7 +255,7 @@ export default {
     },
 
     deleteConnection(connectionId) {
-      if (confirm('Are you sure you want to delete this connection?')) {
+      if (confirm("Are you sure you want to delete this connection?")) {
         this.store.deleteConnection(connectionId)
       }
     }
@@ -181,6 +264,16 @@ export default {
   mounted() {
     this.store.loadPersistedConnections()
     this.settings = { ...this.store.connectionSettings }
+  },
+
+  async beforeUnmount() {
+    if (this.mqttClient) {
+      try {
+        await disconnect(this.mqttClient)
+      } catch (error) {
+        console.error("Cleanup disconnect error:", error)
+      }
+    }
   }
 }
 </script>

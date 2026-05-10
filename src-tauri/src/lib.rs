@@ -2,6 +2,8 @@
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_mqtt::init())
+        .plugin(tauri_plugin_tcp::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -15,7 +17,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             log_message,
             export_messages,
-            clear_old_logs
+            clear_old_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -127,3 +129,4 @@ fn clear_old_logs(days_old: u64, app_handle: tauri::AppHandle) -> Result<(), Str
     
     Ok(())
 }
+
